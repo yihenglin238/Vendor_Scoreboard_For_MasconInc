@@ -45,13 +45,15 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
             table2['vendor confirm date'][i] = 1
         if type(table2['ETD '][i]) == str:
             table2['ETD '][i] = 1
-        
+    
+    
+    
     length = table2['vendor confirm date'].size
     temp2 = table2
     for i in range(length):
         temp2['vendor confirm date'][i] = str(temp2['vendor confirm date'][i])
         temp2['ETD '][i] = str(temp2['ETD '][i])
-    table2 = temp2[temp2["ETD "].str.contains("2023")]
+    table2 = temp2[temp2["ETD "].str.contains("2014|2015|2016|2017|2018|2019|2020|2021|2022|2023|2024|2025|2026|2027|2028|2029|2030|2031|2032|2033|2034|2035|2036|2037|2038|2039|2040")]
     
     table2['vendor confirm date'] = table2['vendor confirm date'].replace('nan', 1)
     table2['vendor confirm date'] = table2['vendor confirm date'].fillna(1)
@@ -184,24 +186,37 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
     #for i in range(s):
         #  outputList['Time'][i] = int(outputList['Time'][i].strftime('%Y%m%d'))
         
-        #get only for the specific vendor
-    temp_df = outputList
+    #get only for the specific vendor
+    temp_df = total_lots_value
     temp_df = temp_df[temp_df['Vendor'] == vendor_name]
     
     #then get only for that specific time period
     temp_df = temp_df[time_start <= temp_df['Time']]
     temp_df = temp_df[time_end >= temp_df['Time']]
     
+    temp_df = temp_df.reset_index(drop=True)
+    
     #do similar things for ncr table
     temp_df_ncr = outputList
     temp_df_ncr['Ref Date'] = temp_df_ncr['Ref Date'].astype(int)
     
-    temp_df_ncr = temp_df_ncr[int(time_start) <= temp_df_ncr['Ref Date']]
+    temp_df_ncr = temp_df_ncr[time_start <= temp_df_ncr['Ref Date']]
     temp_df_ncr = temp_df_ncr[time_end >= temp_df_ncr['Ref Date']]
     
+    temp_df_ncr = temp_df_ncr.reset_index(drop=True)
+    
+    
+    
+    temp_df_ncr_only = ncr
+    temp_df_ncr_only['Ref Date'] = temp_df_ncr_only['Ref Date'].astype(int)
+    
+    temp_df_ncr_only = temp_df_ncr_only[time_start <= temp_df_ncr_only['Ref Date']]
+    temp_df_ncr_only = temp_df_ncr_only[time_end >= temp_df_ncr_only['Ref Date']]
+    
+    temp_df_ncr_only = temp_df_ncr_only.reset_index(drop=True)
     #get all variables for report
     #total lines of temp_df found
-    total_shippingRecord = temp_df['P/N'].size
+    total_shippingRecord = temp_df.shape[0]
     #print('total_shippingRecord = ', total_shippingRecord)
     
     #total parts excluding duplicate
@@ -227,7 +242,7 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
     #print('total_delayed = ', total_delayed)
     
     #count lines in temp_df_ncr
-    total_NCR = temp_df_ncr['P/N'].size
+    total_NCR = temp_df_ncr_only.shape[0]
     #print('total_NCR = ', total_NCR)
     #total_unique_NCR
     total_unique_ncr = temp_df_ncr['P/N'].nunique()
