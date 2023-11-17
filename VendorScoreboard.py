@@ -3,6 +3,8 @@ import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
 
+import os
+
 #assumptions: 
 #'ETD CN' modified to 'ETD ' in shipadv to HQ 20231030 file
 #Date time that is not in correct format are converted to 0
@@ -249,7 +251,9 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
     unique_ncr = temp_df_ncr_only['P/N'].unique()
     #print('unique_ncr = ', unique_ncr)
     
-    #generate report
+    
+    
+    #########################generate report#################################
     print('Brief Report:')
     print('For vendor', vendor_name, 'from time period', time_start, 'to', time_end, ':')
     print('In total,', total_shippingRecord, 'records were found with', total_unique_parts, 'different P/Ns;')
@@ -265,6 +269,8 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
     print('With', total_unique_ncr, 'differnt part numbers;')
     print('which are:', unique_ncr)
     print('')
+    #########################################################################
+    
     
     
     #create the report table
@@ -279,6 +285,8 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
     #                                  total_NCR, total_unique_ncr, unique_ncr])
     
     #append the result onto the table
+    #for pandas1.5 and before
+    '''
     report_df_temp = {'Vendor' : vendor_name, 
                       'Time(from)' : time_start, 
                       'Time(to)' : time_end, 
@@ -291,10 +299,24 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
                       'Total delayed order' : total_delayed,
                       'No. of NCRs' : total_NCR, 
                       'No. of NCR part' : total_unique_ncr}
-    
     report_df = report_df.append(report_df_temp, ignore_index = True)
+    '''
+    #for pandas2.0 or later version
+    report_df_temp = {'Vendor' : vendor_name, 
+                      'Time(from)' : time_start, 
+                      'Time(to)' : time_end, 
+                      'No. of records found' : total_shippingRecord, 
+                      'No. of diff P/N' : total_unique_parts,         
+                      'Total lots value(at least)' : final_total_lots_value, 
+                      'No. of missing price info' : nan_count, 
+                      'Total invalid date order' : total_invalid, 
+                      'Total on time order' : total_recieved, 
+                      'Total delayed order' : total_delayed,
+                      'No. of NCRs' : total_NCR, 
+                      'No. of NCR part' : total_unique_ncr}
+    report_df = pd.concat([report_df, pd.DataFrame([report_df_temp])], ignore_index=True)
     #location = report_df['Vendor'].size
-    report_df.to_csv('report.csv', mode='a', index=False, header=False)
+    report_df.to_csv(os.path.join('outputs/', 'report.csv'), mode='a', index=False, header=False)
     
     #print table for lots information
     #print(temp_df)
@@ -306,16 +328,17 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
     df_output = df_output.rename(columns={"Start Date" : "vendor confirm date"})
     df_output = df_output.rename(columns={"Time" : "ETD "})
     df_output_head = pd.DataFrame(columns=['P/N', 'Cost to cost comp', 'Q\'ty ', 'total_value', 'status', 'Start Date', 'Time'])
-    df_output_head.to_csv(outfile_str, mode='w', index=False, header=True)
-    df_output.to_csv(outfile_str, mode='a', index=False, header=False)
+    df_output_head.to_csv(os.path.join('outputs/', outfile_str), mode='w', index=False, header=True)
+    df_output.to_csv(os.path.join('outputs/', outfile_str), mode='a', index=False, header=False)
     
     ncr_only_output = temp_df_ncr_only[['P/N', 'Ref Document', 'Ref Date']]
-    ncr_only_output.to_csv(outfile_str, mode='a', index=False, header=True)
+    ncr_only_output.to_csv(os.path.join('outputs/', outfile_str), mode='a', index=False, header=True)
     
     
     
-    ######################################################
-    #plotting the graph
+    ###########################plotting the graph############################
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     #import numpy as np
     import seaborn as sns
@@ -329,13 +352,18 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
     x_m = list(df_by_mon.keys())
     y_m = list(df_by_mon.values)
 
-    if df_output['P/N'].size != 0:        
+    if df_output['P/N'].size != 0:    
+        plt.figure(figsize=(10,8), dpi=200)
         plt.bar(x_m, y_m)
         plt.xlabel('month')
         plt.ylabel('Total Value') 
-        plt.title('value vs. time for ' + vendor_name + ' ' + str(time_start) + '-' + str(time_end)) 
+        fig1_name = 'value vs. time for ' + vendor_name + ' ' + str(time_start) + '-' + str(time_end)
+        plt.title(fig1_name) 
         plt.xticks(rotation=90)
+        
+        plt.savefig(os.path.join('outputs/', fig1_name + '.png'))
         plt.show()
+        plt.close()
         #df_by_mon.plot.bar()
     else:
         print('no records found')
@@ -348,8 +376,8 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
     #lots_status['u_count'] = lots_status.value_counts().reset_index(name= 'Count')
     lots_status['u_count'] = lots_status.groupby(['month', 'status'])['count'].transform('count')
 
-    print(lots_status)
-    print(type(lots_status))
+    #print(lots_status)
+    #print(type(lots_status))
     if lots_status.size != 0:
         #set width of bar 
         #barWidth = 0.25
@@ -360,20 +388,24 @@ def report_generator(vendor_name_i, time_start_i, time_end_i, table1_price_i, ta
         
         #plt.bar(m_s, c)
         #lots_status.unstack(level=1).plot(kind = 'bar')
-        
+        plt.figure(figsize=(10,8), dpi=200)
         sns.barplot(x = 'month',
             y = 'u_count',
             hue = 'status',
             data = lots_status,
             palette = "Blues")
         plt.xticks(rotation=90)
-        plt.title('lots status for ' + vendor_name + ' ' + str(time_start) + '-' + str(time_end)) 
+        fig2_name = 'lots status for ' + vendor_name + ' ' + str(time_start) + '-' + str(time_end)
+        plt.title(fig2_name) 
+        
+        plt.savefig(os.path.join('outputs/', fig2_name + '.png'))
         plt.show()
+        plt.close()
     else:
         print('no records found')
         print('')
     #lots_status.hist()
-    ######################################################
+    #########################################################################
     
     
     
@@ -387,7 +419,7 @@ report_df_head = pd.DataFrame(columns=['Vendor', 'Time(from)', 'Time(to)',
                                   'Total lots value(at least)', 'No. of missing price info', 
                                   'Total invalid date order', 'Total on time order', 'Total delayed order',
                                   'No. of NCRs', 'No. of NCR part']) 
-report_df_head.to_csv('report.csv', mode='w', index=False, header=True)
+report_df_head.to_csv(os.path.join('outputs/', 'report.csv'), mode='w', index=False, header=True)
 for i in range(in_len):
     report_generator(table_in['vendor name'][i], table_in['time(from)'][i], 
                      table_in['time(to)'][i], table_in['price filename'][i], 

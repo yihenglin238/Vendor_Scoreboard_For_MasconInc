@@ -1,0 +1,4 @@
+Vendor,Time(from),Time(to),No. of records found,No. of diff P/N,Total lots value(at least),No. of missing price info,Total invalid date order,Total on time order,Total delayed order,No. of NCRs,No. of NCR part
+ZEIHON,20230101,20230201,6,3,18640.0,0,6,0,0,0,0
+ZEIHON,20230101,20230601,33,7,83551.0,6,10,13,10,2,1
+JIAYE,20230101,20231229,331,89,195145.0,99,36,238,57,25,17
